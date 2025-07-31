@@ -118,4 +118,20 @@ impl GameState {
             }
         }
     }
+
+    pub(crate) fn undo_action(&mut self, action: Action) {
+        match action {
+            Action::Move { from,
+            to,
+            flip_card,
+            range} => {
+                if flip_card {
+                    self.stacks[from].last_mut().unwrap().face_up = false;
+                }
+
+                self.stacks[to].truncate(self.stacks[to].len() - range.len());
+                self.stacks[from].extend(range)
+            }
+        }
+    }
 }

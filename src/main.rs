@@ -34,7 +34,16 @@ fn run_game(running: &AtomicBool) {
 
         let value = get_input().unwrap();
         match value {
-            Input::Undo => {}
+            Input::Undo => {
+                let action = if let Some(action) = undo_stack.pop() {
+                    action
+                } else {
+                    continue;
+                };
+
+                game_state.undo_action(action);
+                changed = true;
+            }
             Input::Deal => {}
             Input::Row(e) => {
                 let e = e as usize;
