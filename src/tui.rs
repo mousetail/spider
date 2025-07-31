@@ -1,8 +1,10 @@
-use crate::cards::{CardColor, GameState};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
-use crossterm::style::{Color, SetForegroundColor};
+use crate::action::GameState;
+use crate::cards::CardColor;
+use crossterm::event::{Event, KeyCode, KeyEvent, read};
+use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, cursor, terminal};
 use std::io;
+use crate::InputState;
 
 pub struct Terminal;
 
@@ -32,20 +34,36 @@ pub enum Input {
     Quit,
 }
 
-pub fn draw(game_state: &GameState) -> Result<(), io::Error> {
+pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::Error> {
     let mut stdout = io::stdout();
     stdout.execute(terminal::Clear(terminal::ClearType::All))?;
     stdout.execute(cursor::MoveToRow(0))?;
     stdout.execute(cursor::MoveToColumn(0))?;
 
     for (index, row) in game_state.stacks.iter().enumerate() {
+
+        let bg = match input_state {
+            InputState::SelectSource => {false}
+            InputState::SelectDestination(e) => {
+                e == index
+            }
+        };
+
+        if bg {
+            stdout.execute(SetBackgroundColor(Color::White))?;
+        } else {
+            //stdout.execute( SetBackgroundColor(Color::Black))?;
+        }
         stdout.execute(SetForegroundColor(Color::Grey))?;
+
         print!("{:>3}: ", (index + 1) % 10);
+
+        stdout.execute(ResetColor)?;
+
         for card in row {
             if !card.face_up {
                 stdout.execute(SetForegroundColor(Color::Blue))?;
-            }
-            else if card.get_color() == CardColor::Red {
+            } else if card.get_color() == CardColor::Red {
                 stdout.execute(SetForegroundColor(Color::Red))?;
             } else {
                 stdout.execute(SetForegroundColor(Color::White))?;
@@ -66,10 +84,20 @@ pub fn get_input() -> Result<Input, io::Error> {
             Event::Key(KeyEvent {
                 code: KeyCode::Esc | KeyCode::Char('q' | 'c'),
                 ..
-            })  => return Ok(Input::Quit),
+            }) => return Ok(Input::Quit),
+
             Event::Key(KeyEvent {
-                code: KeyCode::Char(char @ '1'..='9'),
-                modifiers,
+                code: KeyCode::Enter,
+                ..
+            }) => return Ok(Input::Deal),
+
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('u'),
+                ..
+            }) => return Ok(Input::Undo),
+            Event::Key(KeyEvent {
+                code: KeyCode::Char(char @ '0'..='9'),
+                modifiers: _,
                 ..
             }) => {
                 let value = (char.to_digit(10).unwrap() + 9) % 10;

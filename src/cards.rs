@@ -3,8 +3,8 @@ use std::fmt::Display;
 use std::iter::Rev;
 use std::ops::RangeInclusive;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum Suit {
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub(crate) enum Suit {
     Clubs,
     Hearts,
     Diamonds,
@@ -38,10 +38,10 @@ impl Display for Suit {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Card {
-    suit: Suit,
-    rank: u8,
+    pub suit: Suit,
+    pub rank: u8,
     pub face_up: bool,
 }
 
@@ -53,13 +53,23 @@ impl Card {
 
 #[derive(Clone)]
 pub struct CardRange {
-    suit: Suit,
-    rank: Rev<RangeInclusive<u8>>,
-    face_up: bool,
+    pub suit: Suit,
+    pub rank: Rev<RangeInclusive<u8>>,
+    pub face_up: bool,
 }
 
 impl CardRange {
-    fn len(&self) -> usize {self.rank.len()}
+    pub fn len(&self) -> usize {
+        self.rank.len()
+    }
+
+    pub fn contains_rank(&self, rank: u8) -> bool {
+        let (last, first) = (self.rank.clone().next(), self.rank.clone().last());
+
+        first
+            .zip(last)
+            .is_some_and(|(first, last)| first <= rank && rank <= last)
+    }
 }
 impl Iterator for CardRange {
     type Item = Card;
@@ -68,12 +78,12 @@ impl Iterator for CardRange {
         self.rank.next().map(|e| Card {
             suit: self.suit,
             rank: e,
-            face_up: self.face_up
+            face_up: self.face_up,
         })
     }
 }
 
-pub struct Groups<'a>(&'a [Card]);
+pub struct Groups<'a>(pub &'a [Card]);
 
 impl<'a> Iterator for Groups<'a> {
     type Item = CardRange;
@@ -82,7 +92,7 @@ impl<'a> Iterator for Groups<'a> {
         let mut last = first;
         let mut last_index = 0;
         for (inex, &card) in self.0.iter().enumerate().skip(1) {
-            if card.face_up && card.suit == last.suit && card.rank + 1 == last.rank {
+            if first.face_up && card.face_up && card.suit == last.suit && card.rank + 1 == last.rank {
                 last = card;
                 last_index = inex;
             } else {
@@ -107,7 +117,8 @@ impl Display for Card {
                 f,
                 "{}{}",
                 match self.rank {
-                    x @ 0..9 => (x + '1' as u8) as char,
+                    0 => 'A',
+                    x @ 1..9 => (x + '1' as u8) as char,
                     9 => 'X',
                     10 => 'J',
                     11 => 'Q',
@@ -119,79 +130,5 @@ impl Display for Card {
         } else {
             write!(f, "██")
         }
-    }
-}
-
-pub struct GameState {
-    pub stacks: [Vec<Card>; 10],
-    pub deck: Vec<Card>,
-}
-
-impl GameState {
-    pub fn init(rand: &mut impl rand::Rng) -> GameState {
-        let mut all_cards: Vec<_> = (0..13)
-            .flat_map(|e| {
-                [
-                    Card {
-                        suit: Suit::Clubs,
-                        rank: e as u8,
-                        face_up: false,
-                    },
-                    Card {
-                        suit: Suit::Hearts,
-                        rank: e as u8,
-                        face_up: false,
-                    },
-                    Card {
-                        suit: Suit::Clubs,
-                        rank: e as u8,
-                        face_up: false,
-                    },
-                    Card {
-                        suit: Suit::Hearts,
-                        rank: e as u8,
-                        face_up: false,
-                    },
-                ]
-                .repeat(2)
-            })
-            .collect();
-
-        all_cards.shuffle(rand);
-
-        let mut state = GameState {
-            stacks: [
-                (&all_cards[50..56]).to_vec(), // 4 stacks of 5
-                (&all_cards[56..62]).to_vec(),
-                (&all_cards[62..68]).to_vec(),
-                (&all_cards[68..74]).to_vec(),
-                (&all_cards[74..79]).to_vec(), // 6 stacks of 4
-                (&all_cards[79..84]).to_vec(),
-                (&all_cards[84..89]).to_vec(),
-                (&all_cards[89..94]).to_vec(),
-                (&all_cards[94..99]).to_vec(),
-                (&all_cards[99..104]).to_vec(),
-            ],
-            deck: (&all_cards[..50]).to_vec(),
-        };
-
-        for row in &mut state.stacks {
-            row.last_mut().unwrap().face_up = true;
-        }
-
-        state
-    }
-
-    pub fn move_from_to(&mut self, from: usize, to: usize) -> Option<()> {
-        let last_group = Groups(&self.stacks[from]).last()?;
-
-        self.stacks[from].truncate(self.stacks[from].len() - last_group.len());
-        self.stacks[to].extend(last_group);
-
-        if let Some(e) = self.stacks[from].last_mut() {
-            e.face_up = true;
-        }
-
-        Some(())
     }
 }
