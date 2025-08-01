@@ -73,6 +73,12 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
         println!("\r");
     }
     stdout.execute(SetForegroundColor(Color::Grey))?;
+    println!();
+
+    for k in 0..game_state.deck.len()/10 {
+        print!("[{:>3}] ", k);
+    }
+    println!("\r");
 
     Ok(())
 }

@@ -44,7 +44,14 @@ fn run_game(running: &AtomicBool) {
                 game_state.undo_action(action);
                 changed = true;
             }
-            Input::Deal => {}
+            Input::Deal => {
+                let action = Action::Deal;
+
+                game_state.apply_action(action.clone());
+                undo_stack.push(action);
+
+                changed = true;
+            }
             Input::Row(e) => {
                 let e = e as usize;
 

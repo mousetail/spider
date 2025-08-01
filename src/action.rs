@@ -9,6 +9,7 @@ pub enum Action {
         from: usize,
         to: usize,
     },
+    Deal,
 }
 
 pub struct GameState {
@@ -116,21 +117,35 @@ impl GameState {
                     self.stacks[from].last_mut().unwrap().face_up = true;
                 }
             }
+            Action::Deal => {
+                let cards = self.deck.split_off(self.deck.len() - 10);
+                for (stack, mut card) in self.stacks.iter_mut().zip(cards.into_iter()) {
+                    card.face_up = true;
+                    stack.push(card);
+                }
+            }
         }
     }
 
     pub(crate) fn undo_action(&mut self, action: Action) {
         match action {
-            Action::Move { from,
-            to,
-            flip_card,
-            range} => {
+            Action::Move {
+                from,
+                to,
+                flip_card,
+                range,
+            } => {
                 if flip_card {
                     self.stacks[from].last_mut().unwrap().face_up = false;
                 }
 
                 self.stacks[to].truncate(self.stacks[to].len() - range.len());
                 self.stacks[from].extend(range)
+            }
+            Action::Deal => {
+                let vc: Vec<_> = self.stacks.iter_mut().map(|d|d.pop().unwrap()).collect();
+
+                self.deck.extend(vc);
             }
         }
     }
