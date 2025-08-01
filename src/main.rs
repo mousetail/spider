@@ -7,7 +7,7 @@ use std::io::stdout;
 use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{io, thread};
+use std::thread;
 
 mod action;
 mod cards;

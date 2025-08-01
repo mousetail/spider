@@ -113,7 +113,7 @@ impl GameState {
                 self.stacks[from].truncate(self.stacks[from].len() - range.len());
                 self.stacks[to].extend(range);
 
-                if (flip_card) {
+                if flip_card {
                     self.stacks[from].last_mut().unwrap().face_up = true;
                 }
             }
