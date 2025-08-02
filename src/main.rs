@@ -8,6 +8,7 @@ use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
+use crate::cards::Groups;
 
 mod action;
 mod cards;
@@ -19,36 +20,64 @@ enum InputState {
     SelectDestination(usize),
 }
 
+struct StateWithUndoHistory {
+    state: GameState,
+    undo_stack: Vec<Action>,
+}
+
+impl StateWithUndoHistory {
+    fn perform_action(&mut self, action: Action) {
+        self.state.apply_action(action.clone());
+        self.undo_stack.push(action);
+
+        let mut actions = vec![];
+        for (index, stack) in self.state.stacks.iter().enumerate() {
+            if let Some(g) = Groups(stack).last().and_then(|e| (e.len()==13).then_some(e)) {
+                actions.push((g.suit, index));
+            }
+        }
+        for (suit, stack) in actions {
+            self.perform_action(Action::RemoveFullStack{
+                suit, stack
+            })
+        }
+    }
+
+    fn undo(&mut self) {
+        let action = if let Some(action) = self.undo_stack.pop() {
+            action
+        } else {
+            return;
+        };
+
+        self.state.undo_action(action);
+    }
+}
+
 fn run_game(running: &AtomicBool) {
     let _terminal = tui::init().unwrap();
-    let mut undo_stack: Vec<Action> = Vec::new();
-    let mut game_state = GameState::init(&mut rand::rng());
+    let mut game_state = StateWithUndoHistory {
+        state: GameState::init(&mut rand::rng()),
+        undo_stack: Vec::new(),
+    };
     let mut input_state = InputState::SelectSource;
-    let mut changed= true;
+    let mut changed = true;
 
     while running.load(Ordering::Relaxed) {
         if changed {
-            draw(&game_state, input_state).unwrap();
+            draw(&game_state.state, input_state).unwrap();
             changed = false;
         }
 
         let value = get_input().unwrap();
         match value {
             Input::Undo => {
-                let action = if let Some(action) = undo_stack.pop() {
-                    action
-                } else {
-                    continue;
-                };
+                game_state.undo();
 
-                game_state.undo_action(action);
                 changed = true;
             }
             Input::Deal => {
-                let action = Action::Deal;
-
-                game_state.apply_action(action.clone());
-                undo_stack.push(action);
+                game_state.perform_action(Action::Deal);
 
                 changed = true;
             }
@@ -61,11 +90,10 @@ fn run_game(running: &AtomicBool) {
                         changed = true;
                     }
                     InputState::SelectDestination(source) => {
-                        let action = game_state.move_from_to(source, e);
+                        let action = game_state.state.move_from_to(source, e);
                         if let Some(action) = action {
                             println!("Action");
-                            undo_stack.push(action.clone());
-                            game_state.apply_action(action);
+                            game_state.perform_action(action);
                             changed = true;
                         } else {
                             println!("\rNo action available");

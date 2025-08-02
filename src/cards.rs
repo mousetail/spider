@@ -17,7 +17,7 @@ pub enum CardColor {
 }
 
 impl Suit {
-    fn get_color(&self) -> CardColor {
+    pub fn get_color(&self) -> CardColor {
         match self {
             Suit::Clubs => CardColor::Black,
             Suit::Hearts => CardColor::Red,
@@ -63,11 +63,19 @@ impl CardRange {
     }
 
     pub fn contains_rank(&self, rank: u8) -> bool {
-        let (last, first) = (self.rank.clone().next(), self.rank.clone().last());
+        let (last, first) = (self.first(), self.clone().last());
 
         first
             .zip(last)
-            .is_some_and(|(first, last)| first <= rank && rank <= last)
+            .is_some_and(|(first, last)| first.rank <= rank && rank <= last.rank)
+    }
+
+    pub fn first(&self) -> Option<Card> {
+        Some(Card {
+            rank: self.rank.clone().next()?,
+            suit: self.suit,
+            face_up: self.face_up,
+        })
     }
 }
 impl Iterator for CardRange {
@@ -77,6 +85,14 @@ impl Iterator for CardRange {
         self.rank.next().map(|e| Card {
             suit: self.suit,
             rank: e,
+            face_up: self.face_up,
+        })
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        Some(Card {
+            rank: self.rank.clone().next()? + 1 - self.rank.len() as u8,
+            suit: self.suit,
             face_up: self.face_up,
         })
     }

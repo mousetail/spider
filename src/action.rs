@@ -1,4 +1,4 @@
-use crate::cards::{Card, CardRange, Groups};
+use crate::cards::{Card, CardRange, Groups, Suit};
 use rand::prelude::SliceRandom;
 
 #[derive(Clone)]
@@ -10,6 +10,10 @@ pub enum Action {
         to: usize,
     },
     Deal,
+    RemoveFullStack {
+        suit: Suit,
+        stack: usize,
+    },
 }
 
 pub struct GameState {
@@ -81,10 +85,12 @@ impl GameState {
         let dest = self.stacks[to].last();
         println!("{:?} {dest:?}", last_group.rank);
         let moved_cards = match dest {
-            Some(e) => last_group.contains_rank(e.rank - 1).then(|| CardRange {
-                suit: last_group.suit,
-                face_up: last_group.face_up,
-                rank: (last_group.rank.last().unwrap()..=e.rank - 1).rev(),
+            Some(e) => e.rank.checked_sub(1).and_then(|wanted_rank| {
+                last_group.contains_rank(wanted_rank).then(|| CardRange {
+                    suit: last_group.suit,
+                    face_up: last_group.face_up,
+                    rank: (last_group.rank.last().unwrap()..=e.rank - 1).rev(),
+                })
             }),
             None => Some(last_group),
         }?;
@@ -124,6 +130,9 @@ impl GameState {
                     stack.push(card);
                 }
             }
+            Action::RemoveFullStack { suit: _, stack } => {
+                self.stacks[stack].truncate(self.stacks[stack].len() - 13);
+            }
         }
     }
 
@@ -143,10 +152,15 @@ impl GameState {
                 self.stacks[from].extend(range)
             }
             Action::Deal => {
-                let vc: Vec<_> = self.stacks.iter_mut().map(|d|d.pop().unwrap()).collect();
+                let vc: Vec<_> = self.stacks.iter_mut().map(|d| d.pop().unwrap()).collect();
 
                 self.deck.extend(vc);
             }
+            Action::RemoveFullStack { suit, stack } => self.stacks[stack].extend(CardRange {
+                suit,
+                rank: (0..=12).rev(),
+                face_up: true,
+            }),
         }
     }
 }

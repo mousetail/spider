@@ -1,5 +1,5 @@
 use crate::action::GameState;
-use crate::cards::CardColor;
+use crate::cards::{CardColor, Groups};
 use crossterm::event::{Event, KeyCode, KeyEvent, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, cursor, terminal};
@@ -52,7 +52,6 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
         if bg {
             stdout.execute(SetBackgroundColor(Color::White))?;
         } else {
-            //stdout.execute( SetBackgroundColor(Color::Black))?;
         }
         stdout.execute(SetForegroundColor(Color::Grey))?;
 
@@ -60,15 +59,20 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
 
         stdout.execute(ResetColor)?;
 
-        for card in row {
+        for card in Groups(&row) {
             if !card.face_up {
                 stdout.execute(SetForegroundColor(Color::Blue))?;
-            } else if card.get_color() == CardColor::Red {
+            } else if card.suit.get_color() == CardColor::Red {
                 stdout.execute(SetForegroundColor(Color::Red))?;
             } else {
                 stdout.execute(SetForegroundColor(Color::White))?;
             }
-            print!(" {} ", card);
+
+            if card.len() <= 1 {
+                print!(" {} ", card.clone().next().unwrap());
+            } else {
+                print!(" {}{}{}", card.first().unwrap(), "-".repeat(card.len()-1), card.last().unwrap());
+            }
         }
         println!("\r");
     }
