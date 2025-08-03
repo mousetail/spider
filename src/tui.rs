@@ -41,20 +41,21 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
     stdout.execute(cursor::MoveToColumn(0))?;
 
     for (index, row) in game_state.stacks.iter().enumerate() {
-        let bg = match input_state {
-            InputState::SelectSource => Color::Reset,
+        let (bg, fg) = match input_state {
+            InputState::SelectSource => (Color::Reset, Color::Reset),
             InputState::SelectDestination(e) => {
                 if (e == index) {
-                    Color::White
+                    (Color::White, Color::Black)
                 } else if let Some(_) = game_state.can_move_to(e, index) {
-                    Color::Green
+                    (Color::Green, Color::Reset)
                 } else {
-                    Color::Reset
+                    (Color::Reset, Color::Reset)
                 }
             }
         };
 
         stdout.execute(SetBackgroundColor(bg))?;
+        stdout.execute(SetForegroundColor(fg))?;
 
         print!("{:>3}: ", (index + 1) % 10);
 

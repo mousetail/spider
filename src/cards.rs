@@ -44,12 +44,6 @@ pub struct Card {
     pub face_up: bool,
 }
 
-impl Card {
-    pub(crate) fn get_color(&self) -> CardColor {
-        self.suit.get_color()
-    }
-}
-
 #[derive(Clone)]
 pub struct CardRange {
     pub suit: Suit,
