@@ -76,15 +76,14 @@ impl GameState {
         state
     }
 
-    pub fn move_from_to(&self, from: usize, to: usize) -> Option<Action> {
+    pub fn can_move_to(&self, from: usize, to: usize) -> Option<CardRange> {
         if from == to {
             return None;
         }
 
         let last_group = Groups(&self.stacks[from]).last()?;
         let dest = self.stacks[to].last();
-        println!("{:?} {dest:?}", last_group.rank);
-        let moved_cards = match dest {
+        match dest {
             Some(e) => e.rank.checked_sub(1).and_then(|wanted_rank| {
                 last_group.contains_rank(wanted_rank).then(|| CardRange {
                     suit: last_group.suit,
@@ -93,7 +92,11 @@ impl GameState {
                 })
             }),
             None => Some(last_group),
-        }?;
+        }
+    }
+
+    pub fn move_from_to(&self, from: usize, to: usize) -> Option<Action> {
+        let moved_cards = self.can_move_to(from, to)?;
 
         let set_face_up = self.stacks[from]
             .len()

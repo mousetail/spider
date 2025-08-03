@@ -1,10 +1,10 @@
+use crate::InputState;
 use crate::action::GameState;
 use crate::cards::{CardColor, Groups};
 use crossterm::event::{Event, KeyCode, KeyEvent, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, cursor, terminal};
 use std::io;
-use crate::InputState;
 
 pub struct Terminal;
 
@@ -41,19 +41,20 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
     stdout.execute(cursor::MoveToColumn(0))?;
 
     for (index, row) in game_state.stacks.iter().enumerate() {
-
         let bg = match input_state {
-            InputState::SelectSource => {false}
+            InputState::SelectSource => Color::Reset,
             InputState::SelectDestination(e) => {
-                e == index
+                if (e == index) {
+                    Color::White
+                } else if let Some(_) = game_state.can_move_to(e, index) {
+                    Color::Green
+                } else {
+                    Color::Reset
+                }
             }
         };
 
-        if bg {
-            stdout.execute(SetBackgroundColor(Color::White))?;
-        } else {
-        }
-        stdout.execute(SetForegroundColor(Color::Grey))?;
+        stdout.execute(SetBackgroundColor(bg))?;
 
         print!("{:>3}: ", (index + 1) % 10);
 
@@ -71,15 +72,21 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
             if card.len() <= 1 {
                 print!(" {} ", card.clone().next().unwrap());
             } else {
-                print!(" {}{}{}", card.first().unwrap(), "-".repeat(card.len()-1), card.last().unwrap());
+                print!(
+                    " {}{}{}",
+                    card.first().unwrap(),
+                    "-".repeat(card.len() - 1),
+                    card.last().unwrap()
+                );
             }
         }
         println!("\r");
+        stdout.execute(SetForegroundColor(Color::Reset))?;
     }
     stdout.execute(SetForegroundColor(Color::Grey))?;
     println!();
 
-    for k in 0..game_state.deck.len()/10 {
+    for k in 0..game_state.deck.len() / 10 {
         print!("[{:>3}] ", k);
     }
     println!("\r");
