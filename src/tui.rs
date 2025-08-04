@@ -46,7 +46,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
             InputState::SelectDestination(e) => {
                 if e == index {
                     (Color::White, Color::Black)
-                } else if let Some(_) = game_state.can_move_to(e, index) {
+                } else if game_state.can_move_to(e, index).is_some() {
                     (Color::Green, Color::Reset)
                 } else {
                     (Color::Reset, Color::Reset)
@@ -61,7 +61,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
 
         stdout.execute(ResetColor)?;
 
-        for card in Groups(&row) {
+        for card in Groups(row) {
             if !card.face_up {
                 stdout.execute(SetForegroundColor(Color::Blue))?;
             } else if card.suit.get_color() == CardColor::Red {
@@ -88,7 +88,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
     println!();
 
     for k in 0..game_state.deck.len() / 10 {
-        print!("[{:>3}] ", k);
+        print!("[{k:>3}] ");
     }
     println!("\r");
 

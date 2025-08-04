@@ -107,13 +107,13 @@ pub struct Card {
 
 impl Card {
     fn get_rank_char(&self) -> char {
-        return Self::rank_to_char(self.rank);
+        Self::rank_to_char(self.rank)
     }
 
     fn rank_to_char(rank: u8) -> char {
         match rank {
             0 => 'A',
-            x @ 1..9 => (x + '1' as u8) as char,
+            x @ 1..9 => (x + b'1') as char,
             9 => 'X',
             10 => 'J',
             11 => 'Q',
@@ -125,7 +125,7 @@ impl Card {
     fn get_rank_from_char(c: char) -> Option<u8> {
         match c {
             'A' => Some(0),
-            '2'..='9' => Some(c as u8 - '1' as u8),
+            '2'..='9' => Some(c as u8 - b'1'),
             'X' => Some(9),
             'J' => Some(10),
             'Q' => Some(11),
@@ -161,7 +161,7 @@ impl Serialize for CardRange {
             "{}{}-{}{}",
             self.suit,
             Card::rank_to_char(self.rank.clone().next().unwrap()),
-            Card::rank_to_char(self.rank.clone().last().unwrap()),
+            Card::rank_to_char(self.rank.clone().next_back().unwrap()),
             if self.face_up {
                 FACE_UP_CHAR
             } else {

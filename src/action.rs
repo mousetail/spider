@@ -59,18 +59,18 @@ impl GameState {
 
         let mut state = GameState {
             stacks: [
-                (&all_cards[50..56]).to_vec(), // 4 stacks of 5
-                (&all_cards[56..62]).to_vec(),
-                (&all_cards[62..68]).to_vec(),
-                (&all_cards[68..74]).to_vec(),
-                (&all_cards[74..79]).to_vec(), // 6 stacks of 4
-                (&all_cards[79..84]).to_vec(),
-                (&all_cards[84..89]).to_vec(),
-                (&all_cards[89..94]).to_vec(),
-                (&all_cards[94..99]).to_vec(),
-                (&all_cards[99..104]).to_vec(),
+                all_cards[50..56].to_vec(), // 4 stacks of 5
+                all_cards[56..62].to_vec(),
+                all_cards[62..68].to_vec(),
+                all_cards[68..74].to_vec(),
+                all_cards[74..79].to_vec(), // 6 stacks of 4
+                all_cards[79..84].to_vec(),
+                all_cards[84..89].to_vec(),
+                all_cards[89..94].to_vec(),
+                all_cards[94..99].to_vec(),
+                all_cards[99..104].to_vec(),
             ],
-            deck: (&all_cards[..50]).to_vec(),
+            deck: all_cards[..50].to_vec(),
         };
 
         for row in &mut state.stacks {
@@ -92,7 +92,7 @@ impl GameState {
                 last_group.contains_rank(wanted_rank).then(|| CardRange {
                     suit: last_group.suit,
                     face_up: last_group.face_up,
-                    rank: (last_group.rank.last().unwrap()..=e.rank - 1).rev(),
+                    rank: (last_group.rank.clone().next_back().unwrap()..=e.rank - 1).rev(),
                 })
             }),
             None => Some(last_group),
