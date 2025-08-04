@@ -1,7 +1,8 @@
 use crate::cards::{Card, CardRange, Groups, Suit};
 use rand::prelude::SliceRandom;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Action {
     Move {
         range: CardRange,
@@ -16,6 +17,7 @@ pub enum Action {
     },
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub stacks: [Vec<Card>; 10],
     pub deck: Vec<Card>,

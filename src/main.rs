@@ -1,3 +1,4 @@
+use std::fs::{exists, OpenOptions};
 use crate::action::{Action, GameState};
 use crate::tui::{Input, draw, get_input};
 use crossterm::{ExecutableCommand, terminal};
@@ -8,6 +9,7 @@ use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
+use serde::{Deserialize, Serialize};
 use crate::cards::Groups;
 
 mod action;
@@ -20,15 +22,29 @@ enum InputState {
     SelectDestination(usize),
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 struct StateWithUndoHistory {
     state: GameState,
     undo_stack: Vec<Action>,
 }
 
 impl StateWithUndoHistory {
+
+    fn save(&self) {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open("spider-save.json")
+            .unwrap();
+
+        serde_json::to_writer_pretty(file, self).unwrap();
+    }
     fn perform_action(&mut self, action: Action) {
         self.state.apply_action(action.clone());
         self.undo_stack.push(action);
+
+        self.save();
 
         let mut actions = vec![];
         for (index, stack) in self.state.stacks.iter().enumerate() {
@@ -56,9 +72,14 @@ impl StateWithUndoHistory {
 
 fn run_game(running: &AtomicBool) {
     let _terminal = tui::init().unwrap();
-    let mut game_state = StateWithUndoHistory {
-        state: GameState::init(&mut rand::rng()),
-        undo_stack: Vec::new(),
+
+    let mut game_state =if exists("spider-save.json").unwrap() {
+        serde_json::from_reader(OpenOptions::new().read(true).open("spider-save.json").unwrap()).unwrap()
+    } else {
+        StateWithUndoHistory {
+            state: GameState::init(&mut rand::rng()),
+            undo_stack: Vec::new(),
+        }
     };
     let mut input_state = InputState::SelectSource;
     let mut changed = true;

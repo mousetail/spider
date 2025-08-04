@@ -1,12 +1,21 @@
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Display;
 use std::iter::Rev;
 use std::ops::RangeInclusive;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+const FACE_UP_CHAR: char = '↑';
+const FACE_DOWN_CHAR: char = '↓';
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub(crate) enum Suit {
+    #[serde(rename = "♣")]
     Clubs,
+    #[serde(rename = "♥")]
     Hearts,
+    #[serde(rename = "♦")]
     Diamonds,
+    #[serde(rename = "♠")]
     Spades,
 }
 
@@ -25,6 +34,16 @@ impl Suit {
             Suit::Spades => CardColor::Black,
         }
     }
+
+    pub fn from_char(v: char) -> Option<Self> {
+        match v {
+            '♣' => Some(Suit::Clubs),
+            '♥' => Some(Suit::Hearts),
+            '♦' => Some(Suit::Diamonds),
+            '♠' => Some(Suit::Spades),
+            _ => None,
+        }
+    }
 }
 impl Display for Suit {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -37,6 +56,48 @@ impl Display for Suit {
     }
 }
 
+impl Serialize for Card {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        format!(
+            "{}{}{}",
+            self.suit,
+            self.get_rank_char(),
+            if self.face_up {
+                FACE_UP_CHAR
+            } else {
+                FACE_DOWN_CHAR
+            }
+        )
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Card {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let [suit, rank, face_up] = String::deserialize(deserializer)?
+            .chars()
+            .collect::<Vec<char>>()
+            .try_into()
+            .map_err(|_| D::Error::custom("Expected 3 length string"))?;
+
+        Ok(Card {
+            suit: Suit::from_char(suit).ok_or(D::Error::custom("Unexpected suit"))?,
+            rank: Card::get_rank_from_char(rank).ok_or(D::Error::custom("Unexpected rank"))?,
+            face_up: match face_up {
+                FACE_UP_CHAR => true,
+                FACE_DOWN_CHAR => false,
+                _ => Err(D::Error::custom("Unexpected face_up"))?,
+            },
+        })
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Card {
     pub suit: Suit,
@@ -44,11 +105,96 @@ pub struct Card {
     pub face_up: bool,
 }
 
+impl Card {
+    fn get_rank_char(&self) -> char {
+        return Self::rank_to_char(self.rank);
+    }
+
+    fn rank_to_char(rank: u8) -> char {
+        match rank {
+            0 => 'A',
+            x @ 1..9 => (x + '1' as u8) as char,
+            9 => 'X',
+            10 => 'J',
+            11 => 'Q',
+            12 => 'K',
+            x => panic!("Expected rank 0-13 exclusive, got: {x}"),
+        }
+    }
+
+    fn get_rank_from_char(c: char) -> Option<u8> {
+        match c {
+            'A' => Some(0),
+            '2'..='9' => Some(c as u8 - '1' as u8),
+            'X' => Some(9),
+            'J' => Some(10),
+            'Q' => Some(11),
+            'K' => Some(12),
+            _ => None,
+        }
+    }
+}
+
+impl Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.face_up {
+            write!(f, "{}{}", self.get_rank_char(), self.suit)
+        } else {
+            write!(f, "██")
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct CardRange {
     pub suit: Suit,
     pub rank: Rev<RangeInclusive<u8>>,
     pub face_up: bool,
+}
+
+impl Serialize for CardRange {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        format!(
+            "{}{}-{}{}",
+            self.suit,
+            Card::rank_to_char(self.rank.clone().next().unwrap()),
+            Card::rank_to_char(self.rank.clone().last().unwrap()),
+            if self.face_up {
+                FACE_UP_CHAR
+            } else {
+                FACE_DOWN_CHAR
+            }
+        )
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CardRange {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let [suit, from, _, to, face_up] = String::deserialize(deserializer)?
+            .chars()
+            .collect::<Vec<char>>()
+            .try_into()
+            .map_err(|_| D::Error::custom("Expected 5 length string"))?;
+
+        Ok(CardRange {
+            suit: Suit::from_char(suit).ok_or(Error::custom("Bad suit"))?,
+            rank: (Card::get_rank_from_char(to).ok_or(Error::custom("Bad to rank"))?
+                ..=Card::get_rank_from_char(from).ok_or(Error::custom("Bad from rank"))?)
+                .rev(),
+            face_up: match face_up {
+                FACE_UP_CHAR => true,
+                FACE_DOWN_CHAR => false,
+                _ => Err(D::Error::custom("Unexpected face_up"))?,
+            },
+        })
+    }
 }
 
 impl CardRange {
@@ -101,7 +247,8 @@ impl<'a> Iterator for Groups<'a> {
         let mut last = first;
         let mut last_index = 0;
         for (inex, &card) in self.0.iter().enumerate().skip(1) {
-            if first.face_up && card.face_up && card.suit == last.suit && card.rank + 1 == last.rank {
+            if first.face_up && card.face_up && card.suit == last.suit && card.rank + 1 == last.rank
+            {
                 last = card;
                 last_index = inex;
             } else {
@@ -116,28 +263,5 @@ impl<'a> Iterator for Groups<'a> {
             face_up: first.face_up,
             rank: (last.rank..=first.rank).rev(),
         })
-    }
-}
-
-impl Display for Card {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if self.face_up {
-            write!(
-                f,
-                "{}{}",
-                match self.rank {
-                    0 => 'A',
-                    x @ 1..9 => (x + '1' as u8) as char,
-                    9 => 'X',
-                    10 => 'J',
-                    11 => 'Q',
-                    12 => 'K',
-                    x => panic!("Expected rank 0-13 exclusive, got: {x}"),
-                },
-                self.suit
-            )
-        } else {
-            write!(f, "██")
-        }
     }
 }
