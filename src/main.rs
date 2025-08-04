@@ -1,16 +1,16 @@
-use std::fs::{exists, OpenOptions};
 use crate::action::{Action, GameState};
+use crate::cards::Groups;
 use crate::tui::{Input, draw, get_input};
 use crossterm::{ExecutableCommand, terminal};
+use serde::{Deserialize, Serialize};
 use signal_hook::consts::{SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGTSTP};
 use signal_hook::iterator::Signals;
+use std::fs::{OpenOptions, exists};
 use std::io::stdout;
 use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use serde::{Deserialize, Serialize};
-use crate::cards::Groups;
 
 mod action;
 mod cards;
@@ -29,7 +29,6 @@ struct StateWithUndoHistory {
 }
 
 impl StateWithUndoHistory {
-
     fn save(&self) {
         let file = OpenOptions::new()
             .create(true)
@@ -48,14 +47,17 @@ impl StateWithUndoHistory {
 
         let mut actions = vec![];
         for (index, stack) in self.state.stacks.iter().enumerate() {
-            if let Some(g) = Groups(stack).last().and_then(|e| (e.len()==13).then_some(e)) {
-                actions.push((g.suit, index));
+            if let Some(g) = Groups(stack)
+                .last()
+                .and_then(|e| (e.len() == 13).then_some(e))
+            {
+                actions.push((g.suit, index,
+                    stack.len()>13 && !stack[stack.len()-13].face_up
+                ));
             }
         }
-        for (suit, stack) in actions {
-            self.perform_action(Action::RemoveFullStack{
-                suit, stack
-            })
+        for (suit, stack, flip_card) in actions {
+            self.perform_action(Action::RemoveFullStack { suit, stack, flip_card })
         }
     }
 
@@ -73,8 +75,14 @@ impl StateWithUndoHistory {
 fn run_game(running: &AtomicBool) {
     let _terminal = tui::init().unwrap();
 
-    let mut game_state =if exists("spider-save.json").unwrap() {
-        serde_json::from_reader(OpenOptions::new().read(true).open("spider-save.json").unwrap()).unwrap()
+    let mut game_state = if exists("spider-save.json").unwrap() {
+        serde_json::from_reader(
+            OpenOptions::new()
+                .read(true)
+                .open("spider-save.json")
+                .unwrap(),
+        )
+        .unwrap()
     } else {
         StateWithUndoHistory {
             state: GameState::init(&mut rand::rng()),
@@ -98,9 +106,11 @@ fn run_game(running: &AtomicBool) {
                 changed = true;
             }
             Input::Deal => {
-                game_state.perform_action(Action::Deal);
+                if game_state.state.deck.len() >= 10 {
+                    game_state.perform_action(Action::Deal);
 
-                changed = true;
+                    changed = true;
+                }
             }
             Input::Row(e) => {
                 let e = e as usize;

@@ -44,7 +44,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
         let (bg, fg) = match input_state {
             InputState::SelectSource => (Color::Reset, Color::Reset),
             InputState::SelectDestination(e) => {
-                if (e == index) {
+                if e == index {
                     (Color::White, Color::Black)
                 } else if let Some(_) = game_state.can_move_to(e, index) {
                     (Color::Green, Color::Reset)

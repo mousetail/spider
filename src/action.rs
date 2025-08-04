@@ -14,6 +14,8 @@ pub enum Action {
     RemoveFullStack {
         suit: Suit,
         stack: usize,
+        #[serde(default)]
+        flip_card: bool,
     },
 }
 
@@ -135,8 +137,11 @@ impl GameState {
                     stack.push(card);
                 }
             }
-            Action::RemoveFullStack { suit: _, stack } => {
+            Action::RemoveFullStack { suit: _, stack , flip_card} => {
                 self.stacks[stack].truncate(self.stacks[stack].len() - 13);
+                if flip_card {
+                    self.stacks[stack].last_mut().unwrap().face_up = true;
+                }
             }
         }
     }
@@ -161,11 +166,15 @@ impl GameState {
 
                 self.deck.extend(vc);
             }
-            Action::RemoveFullStack { suit, stack } => self.stacks[stack].extend(CardRange {
+            Action::RemoveFullStack { suit, stack , flip_card} => {
+                if flip_card {
+                    self.stacks[stack].last_mut().unwrap().face_up = false;
+                }
+                self.stacks[stack].extend(CardRange {
                 suit,
                 rank: (0..=12).rev(),
                 face_up: true,
-            }),
+            })},
         }
     }
 }
