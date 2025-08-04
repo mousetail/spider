@@ -1,6 +1,7 @@
 use crate::cards::{Card, CardRange, Groups, Suit};
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
+use crate::cheats::{apply_cheat, undo_cheat, Cheat};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Action {
@@ -17,6 +18,7 @@ pub enum Action {
         #[serde(default)]
         flip_card: bool,
     },
+    Cheat(Cheat)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -142,6 +144,9 @@ impl GameState {
                 if flip_card {
                     self.stacks[stack].last_mut().unwrap().face_up = true;
                 }
+            },
+            Action::Cheat(cheat) => {
+                apply_cheat(self, cheat)
             }
         }
     }
@@ -175,6 +180,9 @@ impl GameState {
                 rank: (0..=12).rev(),
                 face_up: true,
             })},
+            Action::Cheat(cheat) => {
+                undo_cheat(self, cheat);
+            }
         }
     }
 }

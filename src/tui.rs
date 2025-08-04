@@ -1,10 +1,13 @@
 use crate::InputState;
 use crate::action::GameState;
 use crate::cards::{CardColor, Groups};
-use crossterm::event::{Event, KeyCode, KeyEvent, read};
+use crossterm::event::{Event, KeyCode, KeyEvent, read, KeyModifiers};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, cursor, terminal};
 use std::io;
+use std::io::Stdout;
+use crossterm::event::KeyCode::Modifier;
+use crate::cheats::CHEAT_NAMES;
 
 pub struct Terminal;
 
@@ -32,18 +35,18 @@ pub enum Input {
     Deal,
     Row(u32),
     Quit,
+    ShowCheatMenu
 }
 
-pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::Error> {
-    let mut stdout = io::stdout();
-    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
-    stdout.execute(cursor::MoveToRow(0))?;
-    stdout.execute(cursor::MoveToColumn(0))?;
-
+fn draw_game(
+    stdout: &mut Stdout,
+    game_state: &GameState,
+    source: Option<usize>,
+) -> Result<(), io::Error> {
     for (index, row) in game_state.stacks.iter().enumerate() {
-        let (bg, fg) = match input_state {
-            InputState::SelectSource => (Color::Reset, Color::Reset),
-            InputState::SelectDestination(e) => {
+        let (bg, fg) = match source {
+            None=> (Color::Reset, Color::Reset),
+            Some(e) => {
                 if e == index {
                     (Color::White, Color::Black)
                 } else if game_state.can_move_to(e, index).is_some() {
@@ -95,10 +98,50 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
     Ok(())
 }
 
+fn draw_cheat_menu(stdout: &mut Stdout) -> Result<(), io::Error> {
+    for (index, cheat) in CHEAT_NAMES.iter().enumerate() {
+        stdout.execute(SetForegroundColor(Color::Grey))?;
+        print!("{:>3}: ", index + 1);
+        stdout.execute(SetForegroundColor(Color::Reset))?;
+        println!("{cheat}\r");
+    }
+
+    Ok(())
+}
+
+pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::Error> {
+    let mut stdout = io::stdout();
+    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+    stdout.execute(cursor::MoveToRow(0))?;
+    stdout.execute(cursor::MoveToColumn(0))?;
+
+    match input_state {
+        InputState::SelectSource => {
+            draw_game(&mut stdout, &game_state, None)?;
+        }
+        InputState::SelectDestination(v) => draw_game(&mut stdout, game_state, Some(v))?,
+        InputState::CheatMenu => {
+            draw_cheat_menu(&mut stdout)?;
+        }
+    }
+
+    Ok(())
+}
+
 pub fn get_input() -> Result<Input, io::Error> {
     loop {
         let ev = read()?;
         match ev {
+            Event::Key(
+                KeyEvent {
+                    code: KeyCode::Char('C'),
+                    modifiers,
+                    ..
+                }
+            ) if modifiers.contains(KeyModifiers::SHIFT) || modifiers.contains(KeyModifiers::CONTROL) => {
+                println!("Cheat menu opening");
+                return Ok(Input::ShowCheatMenu)
+            }
             Event::Key(KeyEvent {
                 code: KeyCode::Esc | KeyCode::Char('q' | 'c'),
                 ..

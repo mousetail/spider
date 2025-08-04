@@ -11,15 +11,18 @@ use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
+use crate::cheats::generate_cheat;
 
 mod action;
 mod cards;
 mod tui;
+mod cheats;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum InputState {
     SelectSource,
     SelectDestination(usize),
+    CheatMenu
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -102,6 +105,7 @@ fn run_game(running: &AtomicBool) {
         match value {
             Input::Undo => {
                 game_state.undo();
+                game_state.save();
 
                 changed = true;
             }
@@ -131,8 +135,20 @@ fn run_game(running: &AtomicBool) {
                         }
 
                         input_state = InputState::SelectSource;
+                    },
+                    InputState::CheatMenu => {
+                        input_state = InputState::SelectSource;
+
+                        if let Some(cheat) = generate_cheat(&game_state.state, e) {
+                            game_state.perform_action(Action::Cheat(cheat));
+                            changed = true;
+                        }
                     }
                 }
+            }
+            Input::ShowCheatMenu => {
+                input_state = InputState::CheatMenu;
+                changed = true;
             }
             Input::Quit => break,
         }
