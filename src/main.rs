@@ -1,7 +1,9 @@
 use crate::action::{Action, GameState};
 use crate::cards::Groups;
+use crate::cheats::generate_cheat;
 use crate::tui::{Input, draw, get_input};
 use crossterm::{ExecutableCommand, terminal};
+use rand_xoshiro::{Xoroshiro128StarStar, Xoshiro512StarStar};
 use serde::{Deserialize, Serialize};
 use signal_hook::consts::{SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGTSTP};
 use signal_hook::iterator::Signals;
@@ -11,18 +13,19 @@ use std::panic::{set_hook, take_hook};
 use std::process::exit;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use crate::cheats::generate_cheat;
 
 mod action;
 mod cards;
-mod tui;
 mod cheats;
+mod tui;
+
+pub type SpiderRand = Xoshiro512StarStar;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum InputState {
     SelectSource,
     SelectDestination(usize),
-    CheatMenu
+    CheatMenu,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -54,13 +57,19 @@ impl StateWithUndoHistory {
                 .last()
                 .and_then(|e| (e.len() == 13).then_some(e))
             {
-                actions.push((g.suit, index,
-                    stack.len()>13 && !stack[stack.len()-13].face_up
+                actions.push((
+                    g.suit,
+                    index,
+                    stack.len() > 13 && !stack[stack.len() - 14].face_up,
                 ));
             }
         }
         for (suit, stack, flip_card) in actions {
-            self.perform_action(Action::RemoveFullStack { suit, stack, flip_card })
+            self.perform_action(Action::RemoveFullStack {
+                suit,
+                stack,
+                flip_card,
+            })
         }
     }
 
@@ -103,6 +112,19 @@ fn run_game(running: &AtomicBool) {
 
         let value = get_input().unwrap();
         match value {
+            Input::Restart => {
+                if (std::fs::exists("spider-save.backup.json").unwrap()) {
+                    std::fs::remove_file("spider-save.backup.json").unwrap();
+                }
+                std::fs::rename("spider-save.json", "spider-save.backup.json").unwrap();
+
+                game_state = StateWithUndoHistory {
+                    state: GameState::init(&mut rand::rng()),
+                    undo_stack: Vec::new(),
+                };
+
+                changed=true;
+            }
             Input::Undo => {
                 game_state.undo();
                 game_state.save();
@@ -135,7 +157,7 @@ fn run_game(running: &AtomicBool) {
                         }
 
                         input_state = InputState::SelectSource;
-                    },
+                    }
                     InputState::CheatMenu => {
                         input_state = InputState::SelectSource;
 

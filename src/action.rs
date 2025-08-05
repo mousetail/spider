@@ -1,7 +1,9 @@
 use crate::cards::{Card, CardRange, Groups, Suit};
-use rand::prelude::SliceRandom;
+use rand::prelude::{SliceRandom, SmallRng};
+use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use crate::cheats::{apply_cheat, undo_cheat, Cheat};
+use crate::SpiderRand;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Action {
@@ -25,6 +27,8 @@ pub enum Action {
 pub struct GameState {
     pub stacks: [Vec<Card>; 10],
     pub deck: Vec<Card>,
+    pub completed_stacks: Vec<Suit>,
+    pub rng: SpiderRand,
 }
 
 impl GameState {
@@ -73,6 +77,8 @@ impl GameState {
                 all_cards[99..104].to_vec(),
             ],
             deck: all_cards[..50].to_vec(),
+            completed_stacks: vec![],
+            rng: SpiderRand::from_os_rng()
         };
 
         for row in &mut state.stacks {
@@ -139,8 +145,9 @@ impl GameState {
                     stack.push(card);
                 }
             }
-            Action::RemoveFullStack { suit: _, stack , flip_card} => {
+            Action::RemoveFullStack { suit, stack , flip_card} => {
                 self.stacks[stack].truncate(self.stacks[stack].len() - 13);
+                self.completed_stacks.push(suit);
                 if flip_card {
                     self.stacks[stack].last_mut().unwrap().face_up = true;
                 }
@@ -175,6 +182,7 @@ impl GameState {
                 if flip_card {
                     self.stacks[stack].last_mut().unwrap().face_up = false;
                 }
+                self.completed_stacks.pop();
                 self.stacks[stack].extend(CardRange {
                 suit,
                 rank: (0..=12).rev(),

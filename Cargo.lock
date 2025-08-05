@@ -230,6 +230,7 @@ checksum = "6db2770f06117d490610c7488547d543617b21bfa07796d7a12f6f1bd53850d1"
 dependencies = [
  "rand_chacha",
  "rand_core",
+ "serde",
 ]
 
 [[package]]
@@ -249,6 +250,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom",
+ "serde",
+]
+
+[[package]]
+name = "rand_xoshiro"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f703f4665700daf5512dcca5f43afa6af89f09db47fb56be587f80636bda2d41"
+dependencies = [
+ "rand_core",
+ "serde",
 ]
 
 [[package]]
@@ -359,6 +371,7 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "rand",
+ "rand_xoshiro",
  "serde",
  "serde_json",
  "signal-hook",

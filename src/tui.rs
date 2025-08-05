@@ -1,13 +1,13 @@
 use crate::InputState;
 use crate::action::GameState;
 use crate::cards::{CardColor, Groups};
-use crossterm::event::{Event, KeyCode, KeyEvent, read, KeyModifiers};
+use crate::cheats::CHEAT_NAMES;
+use crossterm::event::KeyCode::Modifier;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, cursor, terminal};
 use std::io;
 use std::io::Stdout;
-use crossterm::event::KeyCode::Modifier;
-use crate::cheats::CHEAT_NAMES;
 
 pub struct Terminal;
 
@@ -35,7 +35,8 @@ pub enum Input {
     Deal,
     Row(u32),
     Quit,
-    ShowCheatMenu
+    ShowCheatMenu,
+    Restart,
 }
 
 fn draw_game(
@@ -43,9 +44,19 @@ fn draw_game(
     game_state: &GameState,
     source: Option<usize>,
 ) -> Result<(), io::Error> {
+    stdout.execute(SetBackgroundColor(Color::Reset))?;
+    for suit in game_state.completed_stacks.iter() {
+        stdout.execute(SetForegroundColor(match suit.get_color() {
+            CardColor::Red => Color::Red,
+            CardColor::Black => Color::White,
+        }))?;
+        print!(" [{suit}] ")
+    }
+    println!("\r\n");
+
     for (index, row) in game_state.stacks.iter().enumerate() {
         let (bg, fg) = match source {
-            None=> (Color::Reset, Color::Reset),
+            None => (Color::Reset, Color::Reset),
             Some(e) => {
                 if e == index {
                     (Color::White, Color::Black)
@@ -88,11 +99,12 @@ fn draw_game(
         stdout.execute(SetForegroundColor(Color::Reset))?;
     }
     stdout.execute(SetForegroundColor(Color::Grey))?;
-    println!();
+    println!("\r");
 
     for k in 0..game_state.deck.len() / 10 {
         print!("[{k:>3}] ");
     }
+
     println!("\r");
 
     Ok(())
@@ -132,20 +144,24 @@ pub fn get_input() -> Result<Input, io::Error> {
     loop {
         let ev = read()?;
         match ev {
-            Event::Key(
-                KeyEvent {
-                    code: KeyCode::Char('C'),
-                    modifiers,
-                    ..
-                }
-            ) if modifiers.contains(KeyModifiers::SHIFT) || modifiers.contains(KeyModifiers::CONTROL) => {
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('C'),
+                modifiers,
+                ..
+            }) if modifiers.contains(KeyModifiers::SHIFT)
+                || modifiers.contains(KeyModifiers::CONTROL) =>
+            {
                 println!("Cheat menu opening");
-                return Ok(Input::ShowCheatMenu)
+                return Ok(Input::ShowCheatMenu);
             }
             Event::Key(KeyEvent {
                 code: KeyCode::Esc | KeyCode::Char('q' | 'c'),
                 ..
             }) => return Ok(Input::Quit),
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('R'),
+                ..
+            }) => return Ok(Input::Restart),
 
             Event::Key(KeyEvent {
                 code: KeyCode::Enter,
