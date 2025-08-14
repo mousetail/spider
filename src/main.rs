@@ -3,7 +3,7 @@ use crate::cards::Groups;
 use crate::cheats::generate_cheat;
 use crate::tui::{Input, draw, get_input};
 use crossterm::{ExecutableCommand, terminal};
-use rand_xoshiro::{Xoroshiro128StarStar, Xoshiro512StarStar};
+use rand_xoshiro::Xoshiro512StarStar;
 use serde::{Deserialize, Serialize};
 use signal_hook::consts::{SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM, SIGTSTP};
 use signal_hook::iterator::Signals;
@@ -18,6 +18,7 @@ mod action;
 mod cards;
 mod cheats;
 mod tui;
+mod help;
 
 pub type SpiderRand = Xoshiro512StarStar;
 
@@ -113,7 +114,7 @@ fn run_game(running: &AtomicBool) {
         let value = get_input().unwrap();
         match value {
             Input::Restart => {
-                if (std::fs::exists("spider-save.backup.json").unwrap()) {
+                if std::fs::exists("spider-save.backup.json").unwrap() {
                     std::fs::remove_file("spider-save.backup.json").unwrap();
                 }
                 std::fs::rename("spider-save.json", "spider-save.backup.json").unwrap();
@@ -151,10 +152,8 @@ fn run_game(running: &AtomicBool) {
                         if let Some(action) = action {
                             println!("Action");
                             game_state.perform_action(action);
-                            changed = true;
-                        } else {
-                            println!("\rNo action available");
                         }
+                        changed = true;
 
                         input_state = InputState::SelectSource;
                     }

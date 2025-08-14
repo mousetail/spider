@@ -2,20 +2,22 @@ use crate::InputState;
 use crate::action::GameState;
 use crate::cards::{CardColor, Groups};
 use crate::cheats::CHEAT_NAMES;
-use crossterm::event::KeyCode::Modifier;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
-use crossterm::{ExecutableCommand, cursor, terminal};
+use crossterm::{ExecutableCommand, cursor, terminal, QueueableCommand};
 use std::io;
-use std::io::Stdout;
+use std::io::{Stdout, Write};
+use crate::help::get_keybindings;
 
 pub struct Terminal;
 
 impl Drop for Terminal {
     fn drop(&mut self) {
-        io::stdout()
+        let mut stdout = io::stdout();
+        stdout
             .execute(terminal::LeaveAlternateScreen)
             .unwrap();
+        stdout.execute(cursor::Show).unwrap();
         terminal::disable_raw_mode().unwrap();
     }
 }
@@ -44,16 +46,6 @@ fn draw_game(
     game_state: &GameState,
     source: Option<usize>,
 ) -> Result<(), io::Error> {
-    stdout.execute(SetBackgroundColor(Color::Reset))?;
-    for suit in game_state.completed_stacks.iter() {
-        stdout.execute(SetForegroundColor(match suit.get_color() {
-            CardColor::Red => Color::Red,
-            CardColor::Black => Color::White,
-        }))?;
-        print!(" [{suit}] ")
-    }
-    println!("\r\n");
-
     for (index, row) in game_state.stacks.iter().enumerate() {
         let (bg, fg) = match source {
             None => (Color::Reset, Color::Reset),
@@ -61,7 +53,7 @@ fn draw_game(
                 if e == index {
                     (Color::White, Color::Black)
                 } else if game_state.can_move_to(e, index).is_some() {
-                    (Color::Green, Color::Reset)
+                    (Color::Green, Color::Black)
                 } else {
                     (Color::Reset, Color::Reset)
                 }
@@ -117,15 +109,27 @@ fn draw_cheat_menu(stdout: &mut Stdout) -> Result<(), io::Error> {
         stdout.execute(SetForegroundColor(Color::Reset))?;
         println!("{cheat}\r");
     }
+    println!("\r");
 
     Ok(())
 }
 
 pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::Error> {
     let mut stdout = io::stdout();
-    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
-    stdout.execute(cursor::MoveToRow(0))?;
-    stdout.execute(cursor::MoveToColumn(0))?;
+    stdout.queue(terminal::Clear(terminal::ClearType::All))?;
+    stdout.queue(cursor::MoveToRow(0))?;
+    stdout.queue(cursor::MoveToColumn(0))?;
+
+    stdout.queue(SetBackgroundColor(Color::Reset))?;
+    stdout.flush()?;
+    for suit in game_state.completed_stacks.iter() {
+        stdout.execute(SetForegroundColor(match suit.get_color() {
+            CardColor::Red => Color::Red,
+            CardColor::Black => Color::White,
+        }))?;
+        print!(" [{suit}] ")
+    }
+    print!("\r\n\r\n");
 
     match input_state {
         InputState::SelectSource => {
@@ -136,6 +140,38 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
             draw_cheat_menu(&mut stdout)?;
         }
     }
+
+    println!("\r\n\r\n");
+    draw_help_text(input_state, &mut stdout)?;
+
+    stdout.execute(cursor::Hide)?;
+
+    Ok(())
+}
+
+fn draw_help_text(input_state: InputState, stdout: &mut Stdout) -> Result<(), io::Error> {
+    let terminal_width = terminal::size()?.0 as usize;
+
+    let mut x=0;
+    for keybinding in get_keybindings(input_state) {
+        let total_width = keybinding.key.len() + keybinding.text.len() + 2;
+        if x + total_width >= terminal_width {
+            println!("\r");
+            x = 0;
+        }
+
+        stdout.execute(SetBackgroundColor(Color::Grey))?;
+        stdout.execute(SetForegroundColor(Color::Black))?;
+
+        print!("{}", keybinding.key);
+
+
+        stdout.execute(SetBackgroundColor(Color::Reset))?;
+        stdout.execute(SetForegroundColor(Color::Reset))?;
+
+        print!(" {} ", keybinding.text);
+    }
+    println!();
 
     Ok(())
 }

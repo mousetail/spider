@@ -1,11 +1,7 @@
-use rand::{rng, thread_rng};
 use rand::prelude::SliceRandom;
-use rand::rngs::SmallRng;
 use serde::{Deserialize, Serialize};
-use crate::action::Action;
 use crate::action::GameState;
 use crate::cards::{Card, Suit};
-use crate::cheats::Cheat::RedealStacks;
 use crate::SpiderRand;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -95,11 +91,11 @@ pub fn undo_cheat(game_state: &mut GameState, cheat: Cheat) {
 
 
         },
-        Cheat::RedealStacks{ cards, suit, prev_rng_state, next_rng_state } => {
+        Cheat::RedealStacks{ cards, suit, prev_rng_state, next_rng_state: _ } => {
             game_state.rng = *prev_rng_state;
 
             let remainder = cards.len() % 10;
-            (0..remainder).zip(game_state.stacks.iter_mut()).for_each(|(card, stack)| {
+            (0..remainder).zip(game_state.stacks.iter_mut()).for_each(|(_card, stack)| {
                 stack.pop().unwrap();
             });
             game_state.deck.truncate(game_state.deck.len() - 10);

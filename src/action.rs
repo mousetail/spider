@@ -1,5 +1,5 @@
 use crate::cards::{Card, CardRange, Groups, Suit};
-use rand::prelude::{SliceRandom, SmallRng};
+use rand::prelude::SliceRandom;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use crate::cheats::{apply_cheat, undo_cheat, Cheat};
