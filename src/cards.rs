@@ -63,7 +63,7 @@ impl Serialize for Card {
             "{}{}{}",
             self.suit,
             self.get_rank_char(),
-            if self.face_up {
+            if self.is_facing_up {
                 FACE_UP_CHAR
             } else {
                 FACE_DOWN_CHAR
@@ -78,7 +78,7 @@ impl<'de> Deserialize<'de> for Card {
     where
         D: Deserializer<'de>,
     {
-        let [suit, rank, face_up] = String::deserialize(deserializer)?
+        let [suit, rank, is_facing_up] = String::deserialize(deserializer)?
             .chars()
             .collect::<Vec<char>>()
             .try_into()
@@ -88,10 +88,10 @@ impl<'de> Deserialize<'de> for Card {
             suit: Suit::from_char(suit).ok_or_else(|| D::Error::custom("Unexpected suit"))?,
             rank: Card::get_rank_from_char(rank)
                 .ok_or_else(|| D::Error::custom("Unexpected rank"))?,
-            face_up: match face_up {
+            is_facing_up: match is_facing_up {
                 FACE_UP_CHAR => true,
                 FACE_DOWN_CHAR => false,
-                _ => Err(D::Error::custom("Unexpected face_up"))?,
+                _ => Err(D::Error::custom("Unexpected is_facing_up"))?,
             },
         })
     }
@@ -101,7 +101,7 @@ impl<'de> Deserialize<'de> for Card {
 pub struct Card {
     pub suit: Suit,
     pub rank: u8,
-    pub face_up: bool,
+    pub is_facing_up: bool,
 }
 
 impl Card {
@@ -136,7 +136,7 @@ impl Card {
 
 impl Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if self.face_up {
+        if self.is_facing_up {
             write!(f, "{}{}", self.get_rank_char(), self.suit)
         } else {
             write!(f, "██")
@@ -148,7 +148,7 @@ impl Display for Card {
 pub struct CardRange {
     pub suit: Suit,
     pub rank: Rev<RangeInclusive<u8>>,
-    pub face_up: bool,
+    pub is_facing_up: bool,
 }
 
 impl Serialize for CardRange {
@@ -161,7 +161,7 @@ impl Serialize for CardRange {
             self.suit,
             Card::rank_to_char(self.rank.clone().next().unwrap()),
             Card::rank_to_char(self.rank.clone().next_back().unwrap()),
-            if self.face_up {
+            if self.is_facing_up {
                 FACE_UP_CHAR
             } else {
                 FACE_DOWN_CHAR
@@ -176,7 +176,7 @@ impl<'de> Deserialize<'de> for CardRange {
     where
         D: Deserializer<'de>,
     {
-        let [suit, from, _, to, face_up] = String::deserialize(deserializer)?
+        let [suit, from, _, to, is_facing_up] = String::deserialize(deserializer)?
             .chars()
             .collect::<Vec<char>>()
             .try_into()
@@ -187,10 +187,10 @@ impl<'de> Deserialize<'de> for CardRange {
             rank: (Card::get_rank_from_char(to).ok_or_else(|| Error::custom("Bad to rank"))?
                 ..=Card::get_rank_from_char(from).ok_or_else(|| Error::custom("Bad from rank"))?)
                 .rev(),
-            face_up: match face_up {
+            is_facing_up: match is_facing_up {
                 FACE_UP_CHAR => true,
                 FACE_DOWN_CHAR => false,
-                _ => Err(D::Error::custom("Unexpected face_up"))?,
+                _ => Err(D::Error::custom("Unexpected is_facing_up"))?,
             },
         })
     }
@@ -213,7 +213,7 @@ impl CardRange {
         Some(Card {
             rank: self.rank.clone().next()?,
             suit: self.suit,
-            face_up: self.face_up,
+            is_facing_up: self.is_facing_up,
         })
     }
 }
@@ -224,7 +224,7 @@ impl Iterator for CardRange {
         self.rank.next().map(|e| Card {
             suit: self.suit,
             rank: e,
-            face_up: self.face_up,
+            is_facing_up: self.is_facing_up,
         })
     }
 
@@ -232,7 +232,7 @@ impl Iterator for CardRange {
         Some(Card {
             rank: self.rank.clone().next()? + 1 - self.rank.len() as u8,
             suit: self.suit,
-            face_up: self.face_up,
+            is_facing_up: self.is_facing_up,
         })
     }
 }
@@ -246,7 +246,7 @@ impl<'a> Iterator for Groups<'a> {
         let mut last = first;
         let mut last_index = 0;
         for (inex, &card) in self.0.iter().enumerate().skip(1) {
-            if first.face_up && card.face_up && card.suit == last.suit && card.rank + 1 == last.rank
+            if first.is_facing_up && card.is_facing_up && card.suit == last.suit && card.rank + 1 == last.rank
             {
                 last = card;
                 last_index = inex;
@@ -259,7 +259,7 @@ impl<'a> Iterator for Groups<'a> {
 
         Some(CardRange {
             suit: first.suit,
-            face_up: first.face_up,
+            is_facing_up: first.is_facing_up,
             rank: (last.rank..=first.rank).rev(),
         })
     }

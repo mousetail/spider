@@ -61,7 +61,7 @@ impl StateWithUndoHistory {
                 actions.push((
                     g.suit,
                     index,
-                    stack.len() > 13 && !stack[stack.len() - 14].face_up,
+                    stack.len() > 13 && !stack[stack.len() - 14].is_facing_up,
                 ));
             }
         }

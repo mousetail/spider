@@ -67,7 +67,7 @@ fn draw_game(
         stdout.execute(ResetColor)?;
 
         for card in Groups(row) {
-            if !card.face_up {
+            if !card.is_facing_up {
                 stdout.execute(SetForegroundColor(Color::Blue))?;
             } else if card.suit.get_color() == CardColor::Red {
                 stdout.execute(SetForegroundColor(Color::Red))?;

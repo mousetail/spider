@@ -39,22 +39,22 @@ impl GameState {
                     Card {
                         suit: crate::cards::Suit::Clubs,
                         rank: e as u8,
-                        face_up: false,
+                        is_facing_up: false,
                     },
                     Card {
                         suit: crate::cards::Suit::Hearts,
                         rank: e as u8,
-                        face_up: false,
+                        is_facing_up: false,
                     },
                     Card {
                         suit: crate::cards::Suit::Clubs,
                         rank: e as u8,
-                        face_up: false,
+                        is_facing_up: false,
                     },
                     Card {
                         suit: crate::cards::Suit::Hearts,
                         rank: e as u8,
-                        face_up: false,
+                        is_facing_up: false,
                     },
                 ]
                 .repeat(2)
@@ -82,7 +82,7 @@ impl GameState {
         };
 
         for row in &mut state.stacks {
-            row.last_mut().unwrap().face_up = true;
+            row.last_mut().unwrap().is_facing_up = true;
         }
 
         state
@@ -99,7 +99,7 @@ impl GameState {
             Some(e) => e.rank.checked_sub(1).and_then(|wanted_rank| {
                 last_group.contains_rank(wanted_rank).then(|| CardRange {
                     suit: last_group.suit,
-                    face_up: last_group.face_up,
+                    is_facing_up: last_group.is_facing_up,
                     rank: (last_group.rank.clone().next_back().unwrap()..=e.rank - 1).rev(),
                 })
             }),
@@ -110,14 +110,14 @@ impl GameState {
     pub fn move_from_to(&self, from: usize, to: usize) -> Option<Action> {
         let moved_cards = self.can_move_to(from, to)?;
 
-        let set_face_up = self.stacks[from]
+        let set_is_facing_up = self.stacks[from]
             .len()
             .checked_sub(moved_cards.len() + 1)
-            .is_some_and(|i| !self.stacks[from][i].face_up);
+            .is_some_and(|i| !self.stacks[from][i].is_facing_up);
 
         Some(Action::Move {
             range: moved_cards,
-            flip_card: set_face_up,
+            flip_card: set_is_facing_up,
             from,
             to,
         })
@@ -135,13 +135,13 @@ impl GameState {
                 self.stacks[to].extend(range);
 
                 if flip_card {
-                    self.stacks[from].last_mut().unwrap().face_up = true;
+                    self.stacks[from].last_mut().unwrap().is_facing_up = true;
                 }
             }
             Action::Deal => {
                 let cards = self.deck.split_off(self.deck.len() - 10);
                 for (stack, mut card) in self.stacks.iter_mut().zip(cards.into_iter()) {
-                    card.face_up = true;
+                    card.is_facing_up = true;
                     stack.push(card);
                 }
             }
@@ -153,7 +153,7 @@ impl GameState {
                 self.stacks[stack].truncate(self.stacks[stack].len() - 13);
                 self.completed_stacks.push(suit);
                 if flip_card {
-                    self.stacks[stack].last_mut().unwrap().face_up = true;
+                    self.stacks[stack].last_mut().unwrap().is_facing_up = true;
                 }
             }
             Action::Cheat(cheat) => apply_cheat(self, cheat),
@@ -169,7 +169,7 @@ impl GameState {
                 range,
             } => {
                 if flip_card {
-                    self.stacks[from].last_mut().unwrap().face_up = false;
+                    self.stacks[from].last_mut().unwrap().is_facing_up = false;
                 }
 
                 self.stacks[to].truncate(self.stacks[to].len() - range.len());
@@ -186,13 +186,13 @@ impl GameState {
                 flip_card,
             } => {
                 if flip_card {
-                    self.stacks[stack].last_mut().unwrap().face_up = false;
+                    self.stacks[stack].last_mut().unwrap().is_facing_up = false;
                 }
                 self.completed_stacks.pop();
                 self.stacks[stack].extend(CardRange {
                     suit,
                     rank: (0..=12).rev(),
-                    face_up: true,
+                    is_facing_up: true,
                 });
             }
             Action::Cheat(cheat) => {
