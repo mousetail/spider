@@ -28,6 +28,9 @@ As simple as `cargo run`.
 ## Controlls
 
 <kbd>0</kbd>-<kbd>9</kbd> Select a stack to move from/to
+
 <kbd>enter</kbd> Deal a row of cards
+
 <kbd>Shift</kbd>+<kbd>R</kbd> Start a new game. Did this by accident? Old game will be moved to `spider-save.backup.json` so you can manully move it back.
+
 <kbd>Shift</kbd>+<kbd>C</kbd> Open cheat menu
