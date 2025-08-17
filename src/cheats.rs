@@ -69,7 +69,7 @@ pub fn apply_cheat(game_state: &mut GameState, cheat: Cheat) {
 
             cards.zip(game_state.stacks.iter_mut()).for_each(|(card, stack)| {
                 stack.push(card);
-            })
+            });
         }
     }
 }

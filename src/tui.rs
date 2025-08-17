@@ -126,7 +126,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
             CardColor::Red => Color::Red,
             CardColor::Black => Color::White,
         }))?;
-        print!(" [{suit}] ")
+        print!(" [{suit}] ");
     }
     print!("\r\n\r\n");
 

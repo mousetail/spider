@@ -70,7 +70,7 @@ impl StateWithUndoHistory {
                 suit,
                 stack,
                 flip_card,
-            })
+            });
         }
     }
 
@@ -174,7 +174,7 @@ fn run_game(running: &AtomicBool) {
             Input::ExitMenu => match input_state {
                 InputState::CheatMenu => {
                     input_state = InputState::SelectSource;
-                    changed = true
+                    changed = true;
                 }
                 _ => break,
             },

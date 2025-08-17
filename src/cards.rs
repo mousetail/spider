@@ -28,10 +28,8 @@ pub enum CardColor {
 impl Suit {
     pub fn get_color(&self) -> CardColor {
         match self {
-            Suit::Clubs => CardColor::Black,
-            Suit::Hearts => CardColor::Red,
-            Suit::Diamonds => CardColor::Red,
-            Suit::Spades => CardColor::Black,
+            Suit::Hearts | Suit::Diamonds => CardColor::Red,
+            Suit::Clubs | Suit::Spades => CardColor::Black,
         }
     }
 
@@ -87,8 +85,9 @@ impl<'de> Deserialize<'de> for Card {
             .map_err(|_| D::Error::custom("Expected 3 length string"))?;
 
         Ok(Card {
-            suit: Suit::from_char(suit).ok_or(D::Error::custom("Unexpected suit"))?,
-            rank: Card::get_rank_from_char(rank).ok_or(D::Error::custom("Unexpected rank"))?,
+            suit: Suit::from_char(suit).ok_or_else(|| D::Error::custom("Unexpected suit"))?,
+            rank: Card::get_rank_from_char(rank)
+                .ok_or_else(|| D::Error::custom("Unexpected rank"))?,
             face_up: match face_up {
                 FACE_UP_CHAR => true,
                 FACE_DOWN_CHAR => false,
@@ -184,9 +183,9 @@ impl<'de> Deserialize<'de> for CardRange {
             .map_err(|_| D::Error::custom("Expected 5 length string"))?;
 
         Ok(CardRange {
-            suit: Suit::from_char(suit).ok_or(Error::custom("Bad suit"))?,
-            rank: (Card::get_rank_from_char(to).ok_or(Error::custom("Bad to rank"))?
-                ..=Card::get_rank_from_char(from).ok_or(Error::custom("Bad from rank"))?)
+            suit: Suit::from_char(suit).ok_or_else(|| Error::custom("Bad suit"))?,
+            rank: (Card::get_rank_from_char(to).ok_or_else(|| Error::custom("Bad to rank"))?
+                ..=Card::get_rank_from_char(from).ok_or_else(|| Error::custom("Bad from rank"))?)
                 .rev(),
             face_up: match face_up {
                 FACE_UP_CHAR => true,

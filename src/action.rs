@@ -1,9 +1,9 @@
 use crate::cards::{Card, CardRange, Groups, Suit};
+use crate::cheats::{apply_cheat, undo_cheat, Cheat};
+use crate::SpiderRand;
 use rand::prelude::SliceRandom;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
-use crate::cheats::{apply_cheat, undo_cheat, Cheat};
-use crate::SpiderRand;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Action {
@@ -20,7 +20,7 @@ pub enum Action {
         #[serde(default)]
         flip_card: bool,
     },
-    Cheat(Cheat)
+    Cheat(Cheat),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -78,7 +78,7 @@ impl GameState {
             ],
             deck: all_cards[..50].to_vec(),
             completed_stacks: vec![],
-            rng: SpiderRand::from_os_rng()
+            rng: SpiderRand::from_os_rng(),
         };
 
         for row in &mut state.stacks {
@@ -145,16 +145,18 @@ impl GameState {
                     stack.push(card);
                 }
             }
-            Action::RemoveFullStack { suit, stack , flip_card} => {
+            Action::RemoveFullStack {
+                suit,
+                stack,
+                flip_card,
+            } => {
                 self.stacks[stack].truncate(self.stacks[stack].len() - 13);
                 self.completed_stacks.push(suit);
                 if flip_card {
                     self.stacks[stack].last_mut().unwrap().face_up = true;
                 }
-            },
-            Action::Cheat(cheat) => {
-                apply_cheat(self, cheat)
             }
+            Action::Cheat(cheat) => apply_cheat(self, cheat),
         }
     }
 
@@ -171,23 +173,28 @@ impl GameState {
                 }
 
                 self.stacks[to].truncate(self.stacks[to].len() - range.len());
-                self.stacks[from].extend(range)
+                self.stacks[from].extend(range);
             }
             Action::Deal => {
                 let vc: Vec<_> = self.stacks.iter_mut().map(|d| d.pop().unwrap()).collect();
 
                 self.deck.extend(vc);
             }
-            Action::RemoveFullStack { suit, stack , flip_card} => {
+            Action::RemoveFullStack {
+                suit,
+                stack,
+                flip_card,
+            } => {
                 if flip_card {
                     self.stacks[stack].last_mut().unwrap().face_up = false;
                 }
                 self.completed_stacks.pop();
                 self.stacks[stack].extend(CardRange {
-                suit,
-                rank: (0..=12).rev(),
-                face_up: true,
-            })},
+                    suit,
+                    rank: (0..=12).rev(),
+                    face_up: true,
+                });
+            }
             Action::Cheat(cheat) => {
                 undo_cheat(self, cheat);
             }
