@@ -103,7 +103,7 @@ static KEYBINDINGS: &[(Keybinding, KeybindingContext)] = &[
 
 pub fn get_keybindings(state: InputState) -> impl IntoIterator<Item = Keybinding> {
     KEYBINDINGS
-        .into_iter()
+        .iter()
         .copied()
         .filter(match state {
             InputState::SelectSource => {

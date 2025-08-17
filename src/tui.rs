@@ -6,10 +6,8 @@ use crate::help::get_keybindings;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor, terminal};
-use std::fs::File;
 use std::io;
 use std::io::{Stdout, Write};
-use std::os::fd::{self, IntoRawFd};
 
 pub struct Terminal;
 
@@ -134,7 +132,7 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
 
     match input_state {
         InputState::SelectSource => {
-            draw_game(&mut stdout, &game_state, None)?;
+            draw_game(&mut stdout, game_state, None)?;
         }
         InputState::SelectDestination(v) => draw_game(&mut stdout, game_state, Some(v))?,
         InputState::CheatMenu => {
