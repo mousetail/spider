@@ -2,21 +2,21 @@ use crate::InputState;
 use crate::action::GameState;
 use crate::cards::{CardColor, Groups};
 use crate::cheats::CHEAT_NAMES;
+use crate::help::get_keybindings;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, read};
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
-use crossterm::{ExecutableCommand, cursor, terminal, QueueableCommand};
+use crossterm::{ExecutableCommand, QueueableCommand, cursor, terminal};
+use std::fs::File;
 use std::io;
 use std::io::{Stdout, Write};
-use crate::help::get_keybindings;
+use std::os::fd::{self, IntoRawFd};
 
 pub struct Terminal;
 
 impl Drop for Terminal {
     fn drop(&mut self) {
         let mut stdout = io::stdout();
-        stdout
-            .execute(terminal::LeaveAlternateScreen)
-            .unwrap();
+        stdout.execute(terminal::LeaveAlternateScreen).unwrap();
         stdout.execute(cursor::Show).unwrap();
         terminal::disable_raw_mode().unwrap();
     }
@@ -37,6 +37,7 @@ pub enum Input {
     Deal,
     Row(u32),
     Quit,
+    ExitMenu,
     ShowCheatMenu,
     Restart,
 }
@@ -152,19 +153,19 @@ pub fn draw(game_state: &GameState, input_state: InputState) -> Result<(), io::E
 fn draw_help_text(input_state: InputState, stdout: &mut Stdout) -> Result<(), io::Error> {
     let terminal_width = terminal::size()?.0 as usize;
 
-    let mut x=0;
+    let mut x = 0;
     for keybinding in get_keybindings(input_state) {
         let total_width = keybinding.key.len() + keybinding.text.len() + 2;
         if x + total_width >= terminal_width {
             println!("\r");
             x = 0;
         }
+        x += total_width;
 
         stdout.execute(SetBackgroundColor(Color::Grey))?;
         stdout.execute(SetForegroundColor(Color::Black))?;
 
         print!("{}", keybinding.key);
-
 
         stdout.execute(SetBackgroundColor(Color::Reset))?;
         stdout.execute(SetForegroundColor(Color::Reset))?;
@@ -191,9 +192,14 @@ pub fn get_input() -> Result<Input, io::Error> {
                 return Ok(Input::ShowCheatMenu);
             }
             Event::Key(KeyEvent {
+                code: KeyCode::Char('c'),
+                modifiers,
+                ..
+            }) if (modifiers.contains(KeyModifiers::CONTROL)) => return Ok(Input::Quit),
+            Event::Key(KeyEvent {
                 code: KeyCode::Esc | KeyCode::Char('q' | 'c'),
                 ..
-            }) => return Ok(Input::Quit),
+            }) => return Ok(Input::ExitMenu),
             Event::Key(KeyEvent {
                 code: KeyCode::Char('R'),
                 ..

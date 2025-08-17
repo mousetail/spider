@@ -17,8 +17,8 @@ use std::thread;
 mod action;
 mod cards;
 mod cheats;
-mod tui;
 mod help;
+mod tui;
 
 pub type SpiderRand = Xoshiro512StarStar;
 
@@ -124,7 +124,7 @@ fn run_game(running: &AtomicBool) {
                     undo_stack: Vec::new(),
                 };
 
-                changed=true;
+                changed = true;
             }
             Input::Undo => {
                 game_state.undo();
@@ -171,6 +171,13 @@ fn run_game(running: &AtomicBool) {
                 input_state = InputState::CheatMenu;
                 changed = true;
             }
+            Input::ExitMenu => match input_state {
+                InputState::CheatMenu => {
+                    input_state = InputState::SelectSource;
+                    changed = true
+                }
+                _ => break,
+            },
             Input::Quit => break,
         }
     }

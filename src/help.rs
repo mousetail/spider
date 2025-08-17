@@ -85,34 +85,45 @@ static KEYBINDINGS: &[(Keybinding, KeybindingContext)] = &[
         },
         KeybindingContext::CheatMenu,
     ),
+    (
+        Keybinding {
+            key: "[q]",
+            text: "Exit menu",
+        },
+        KeybindingContext::CheatMenu,
+    ),
+    (
+        Keybinding {
+            key: "[esc]",
+            text: "Exit menu",
+        },
+        KeybindingContext::CheatMenu,
+    ),
 ];
 
 pub fn get_keybindings(state: InputState) -> impl IntoIterator<Item = Keybinding> {
-    KEYBINDINGS.into_iter().copied().filter(match state {
-        InputState::SelectSource => {
-            &(|i: &(Keybinding, KeybindingContext)| {
-                matches!(
-                    i.1,
-                    KeybindingContext::NonCheatMenu | KeybindingContext::SelectSource
-                )
-            }) as &dyn Fn(&(Keybinding, KeybindingContext)) -> bool
-        }
+    KEYBINDINGS
+        .into_iter()
+        .copied()
+        .filter(match state {
+            InputState::SelectSource => {
+                &(|i: &(Keybinding, KeybindingContext)| {
+                    matches!(
+                        i.1,
+                        KeybindingContext::NonCheatMenu | KeybindingContext::SelectSource
+                    )
+                }) as &dyn Fn(&(Keybinding, KeybindingContext)) -> bool
+            }
 
-        InputState::SelectDestination(_) => {
-            &|i: &(Keybinding, KeybindingContext)| {
+            InputState::SelectDestination(_) => &|i: &(Keybinding, KeybindingContext)| {
                 matches!(
                     i.1,
                     KeybindingContext::NonCheatMenu | KeybindingContext::SelectDestination
                 )
+            },
+            InputState::CheatMenu => {
+                &|i: &(Keybinding, KeybindingContext)| matches!(i.1, KeybindingContext::CheatMenu)
             }
-        }
-        InputState::CheatMenu => {
-            &|i: &(Keybinding, KeybindingContext)| {
-                matches!(
-                    i.1,
-                    KeybindingContext::CheatMenu
-                )
-            }
-        }
-    }).map(|i| i.0)
+        })
+        .map(|i| i.0)
 }
