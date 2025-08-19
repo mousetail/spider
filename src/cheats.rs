@@ -30,7 +30,7 @@ pub fn generate_cheat(game_state: &GameState, cheat_number: usize) -> Option<Che
         1 => {
             Some(Cheat::HarvestTopRow{
                 turn_over_cards: game_state.stacks.clone().map(
-                    |i| i.len() >=2 && !i[i.len()-2].face_up
+                    |i| i.len() >=2 && !i[i.len()-2].is_facing_up
                 )
             })
         },
@@ -49,7 +49,7 @@ pub fn apply_cheat(game_state: &mut GameState, cheat: Cheat) {
 
             game_state.stacks.iter_mut().zip(turn_over_cards).for_each(|(stack, turn_over) | {
                 if turn_over {
-                    stack.last_mut().unwrap().face_up = true;
+                    stack.last_mut().unwrap().is_facing_up = true;
                 }
             });
         },
@@ -61,7 +61,7 @@ pub fn apply_cheat(game_state: &mut GameState, cheat: Cheat) {
                 |e| Card {
                     suit,
                     rank: *e,
-                    face_up: true,
+                    is_facing_up: true,
                 }
             );
 
@@ -69,7 +69,7 @@ pub fn apply_cheat(game_state: &mut GameState, cheat: Cheat) {
 
             cards.zip(game_state.stacks.iter_mut()).for_each(|(card, stack)| {
                 stack.push(card);
-            })
+            });
         }
     }
 }
@@ -79,13 +79,13 @@ pub fn undo_cheat(game_state: &mut GameState, cheat: Cheat) {
         Cheat::HarvestTopRow { turn_over_cards } => {
             game_state.stacks.iter_mut().zip(turn_over_cards).for_each(|(stack, turn_over) | {
                 if turn_over {
-                    stack.last_mut().unwrap().face_up = false;
+                    stack.last_mut().unwrap().is_facing_up = false;
                 }
             });
 
             let cards = game_state.deck.split_off(game_state.deck.len() - 10);
             for (stack, mut card) in game_state.stacks.iter_mut().zip(cards.into_iter()) {
-                card.face_up = true;
+                card.is_facing_up = true;
                 stack.push(card);
             }
 
