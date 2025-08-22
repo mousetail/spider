@@ -246,7 +246,10 @@ impl<'a> Iterator for Groups<'a> {
         let mut last = first;
         let mut last_index = 0;
         for (inex, &card) in self.0.iter().enumerate().skip(1) {
-            if first.is_facing_up && card.is_facing_up && card.suit == last.suit && card.rank + 1 == last.rank
+            if first.is_facing_up
+                && card.is_facing_up
+                && card.suit == last.suit
+                && card.rank + 1 == last.rank
             {
                 last = card;
                 last_index = inex;

@@ -1,8 +1,8 @@
-use crate::cards::{Card, CardRange, Groups, Suit};
-use crate::cheats::{apply_cheat, undo_cheat, Cheat};
 use crate::SpiderRand;
-use rand::prelude::SliceRandom;
+use crate::cards::{Card, CardRange, Groups, Suit};
+use crate::cheats::{Cheat, apply_cheat, undo_cheat};
 use rand::SeedableRng;
+use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
